@@ -23,6 +23,8 @@ public class ChatGUI extends JFrame implements MessageContainer {
     private JTextField messageInputField;
     private JButton sendButton;
     private JButton connectButton;
+    private JTextField nameField;
+    private String userName;
 
     private Sender sender;
     private int localPort;
@@ -51,6 +53,16 @@ public class ChatGUI extends JFrame implements MessageContainer {
 
         gbc.gridx = 0;
         gbc.gridy = 0;
+        connectionPanel.add(new JLabel("Seu Nome:"), gbc);
+
+        gbc.gridx = 1;
+        gbc.gridwidth = 3; 
+        nameField = new JTextField("", 10);
+        connectionPanel.add(nameField, gbc);
+        gbc.gridwidth = 1; 
+        
+        gbc.gridx = 0;
+        gbc.gridy = 1;
         connectionPanel.add(new JLabel("Porta Local:"), gbc);
 
         gbc.gridx = 1;
@@ -65,7 +77,7 @@ public class ChatGUI extends JFrame implements MessageContainer {
         connectionPanel.add(remoteIpField, gbc);
 
         gbc.gridx = 0;
-        gbc.gridy = 1;
+        gbc.gridy = 2;
         connectionPanel.add(new JLabel("Porta Remota:"), gbc);
 
         gbc.gridx = 1;
@@ -79,7 +91,7 @@ public class ChatGUI extends JFrame implements MessageContainer {
         connectionPanel.add(protocolCheckBox, gbc);
 
         gbc.gridx = 0;
-        gbc.gridy = 2;
+        gbc.gridy = 3;
         gbc.gridwidth = 4;
         gbc.anchor = GridBagConstraints.CENTER;
         connectButton = new JButton("Conectar");
@@ -121,6 +133,14 @@ public class ChatGUI extends JFrame implements MessageContainer {
             @Override
             public void actionPerformed(ActionEvent e) {
                 try {
+                    userName = nameField.getText().trim();
+                    if (userName.isEmpty()) {
+                        JOptionPane.showMessageDialog(ChatGUI.this,
+                                "O campo 'Seu Nome' não pode estar vazio.",
+                                "Erro de Entrada", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+
                     localPort = Integer.parseInt(localPortField.getText());
                     remotePort = Integer.parseInt(remotePortField.getText());
                     String remoteIp = remoteIpField.getText();
@@ -135,6 +155,7 @@ public class ChatGUI extends JFrame implements MessageContainer {
 
                     sender = ChatFactory.build(useTcp, remoteIp, remotePort, localPort, ChatGUI.this);
 
+                    nameField.setEditable(false); // Desabilita o campo de nome
                     localPortField.setEditable(false);
                     remoteIpField.setEditable(false);
                     remotePortField.setEditable(false);
@@ -146,7 +167,7 @@ public class ChatGUI extends JFrame implements MessageContainer {
                     messageInputField.requestFocusInWindow();
 
                     String protocol = useTcp ? "TCP" : "UDP";
-                    newMessage(String.format("Conectado com sucesso via %s! Você pode começar a enviar mensagens.", protocol));
+                    newMessage(String.format("Conectado com sucesso como '%s' via %s!", userName, protocol));
 
                 } catch (NumberFormatException ex) {
                     JOptionPane.showMessageDialog(ChatGUI.this,
@@ -163,11 +184,16 @@ public class ChatGUI extends JFrame implements MessageContainer {
         ActionListener sendActionListener = new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String message = messageInputField.getText();
-                if (!message.trim().isEmpty()) {
+                String messageText = messageInputField.getText();
+                if (!messageText.trim().isEmpty()) {
                     try {
-                        sender.send(message);
-                        messageDisplayArea.append("Você: " + message + "\n");
+                        // --- INÍCIO DA MODIFICAÇÃO (FORMATA A MENSAGEM COM O NOME) ---
+                        String formattedMessage = userName + ": " + messageText;
+                        sender.send(formattedMessage);
+                        // --- FIM DA MODIFICAÇÃO ---
+
+                        // Exibe a mensagem localmente como "Você"
+                        messageDisplayArea.append("Você: " + messageText + "\n");
                         messageInputField.setText("");
                     } catch (ChatException ex) {
                         JOptionPane.showMessageDialog(ChatGUI.this,
@@ -185,7 +211,8 @@ public class ChatGUI extends JFrame implements MessageContainer {
     @Override
     public void newMessage(String message) {
         SwingUtilities.invokeLater(() -> {
-            messageDisplayArea.append(":> " + message + "\n");
+            // A mensagem recebida já virá formatada com o nome do remetente
+            messageDisplayArea.append(message + "\n");
             messageDisplayArea.setCaretPosition(messageDisplayArea.getDocument().getLength());
         });
     }
