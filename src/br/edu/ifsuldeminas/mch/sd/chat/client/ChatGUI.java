@@ -155,7 +155,7 @@ public class ChatGUI extends JFrame implements MessageContainer {
 
                     sender = ChatFactory.build(useTcp, remoteIp, remotePort, localPort, ChatGUI.this);
 
-                    nameField.setEditable(false); // Desabilita o campo de nome
+                    nameField.setEditable(false);
                     localPortField.setEditable(false);
                     remoteIpField.setEditable(false);
                     remotePortField.setEditable(false);
@@ -187,12 +187,9 @@ public class ChatGUI extends JFrame implements MessageContainer {
                 String messageText = messageInputField.getText();
                 if (!messageText.trim().isEmpty()) {
                     try {
-                        // --- INÍCIO DA MODIFICAÇÃO (FORMATA A MENSAGEM COM O NOME) ---
                         String formattedMessage = userName + ": " + messageText;
                         sender.send(formattedMessage);
-                        // --- FIM DA MODIFICAÇÃO ---
 
-                        // Exibe a mensagem localmente como "Você"
                         messageDisplayArea.append("Você: " + messageText + "\n");
                         messageInputField.setText("");
                     } catch (ChatException ex) {
@@ -211,8 +208,7 @@ public class ChatGUI extends JFrame implements MessageContainer {
     @Override
     public void newMessage(String message) {
         SwingUtilities.invokeLater(() -> {
-            // A mensagem recebida já virá formatada com o nome do remetente
-            messageDisplayArea.append(message + "\n");
+            messageDisplayArea.append("Recebido: "+message + "\n");
             messageDisplayArea.setCaretPosition(messageDisplayArea.getDocument().getLength());
         });
     }
