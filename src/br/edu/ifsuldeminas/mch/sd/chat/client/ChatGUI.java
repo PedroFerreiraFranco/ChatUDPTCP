@@ -6,6 +6,7 @@ import br.edu.ifsuldeminas.mch.sd.chat.MessageContainer;
 import br.edu.ifsuldeminas.mch.sd.chat.Sender;
 
 import javax.swing.*;
+import javax.swing.border.Border;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -15,49 +16,91 @@ import java.net.UnknownHostException;
 public class ChatGUI extends JFrame implements MessageContainer {
 
     private JTextField localPortField;
+    private JTextField remoteIpField;
     private JTextField remotePortField;
+    private JCheckBox protocolCheckBox;
     private JTextArea messageDisplayArea;
     private JTextField messageInputField;
     private JButton sendButton;
     private JButton connectButton;
-    
+
     private Sender sender;
     private int localPort;
     private int remotePort;
 
     public ChatGUI() {
-        super("Chat UDP");
-        
-        setSize(500, 400);
+        super("Pedro Ferreira Franco - CHAT UDP/TCP");
+        setSize(600, 500);
+
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout(10, 10));
 
-        JPanel portPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 5));
-        portPanel.setBorder(BorderFactory.createTitledBorder("Configurações de Porta"));
+        Color backgroundColor = Color.WHITE;
+        Color accentColor = Color.ORANGE;
+        getContentPane().setBackground(backgroundColor);
 
-        portPanel.add(new JLabel("Porta Local:"));
-        localPortField = new JTextField("5000", 6);
-        portPanel.add(localPortField);
+        JPanel connectionPanel = new JPanel(new GridBagLayout());
+        connectionPanel.setBackground(backgroundColor);
+        Border orangeBorder = BorderFactory.createLineBorder(accentColor, 1);
+        connectionPanel.setBorder(BorderFactory.createTitledBorder(orangeBorder, " Configurações de Conexão "));
+        
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
 
-        portPanel.add(new JLabel("Porta Remota:"));
-        remotePortField = new JTextField("5001", 6);
-        portPanel.add(remotePortField);
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        connectionPanel.add(new JLabel("Porta Local:"), gbc);
 
+        gbc.gridx = 1;
+        localPortField = new JTextField("5000", 10);
+        connectionPanel.add(localPortField, gbc);
+
+        gbc.gridx = 2;
+        connectionPanel.add(new JLabel("IP Remoto:"), gbc);
+
+        gbc.gridx = 3;
+        remoteIpField = new JTextField("localhost", 10);
+        connectionPanel.add(remoteIpField, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        connectionPanel.add(new JLabel("Porta Remota:"), gbc);
+
+        gbc.gridx = 1;
+        remotePortField = new JTextField("5001", 10);
+        connectionPanel.add(remotePortField, gbc);
+        
+        gbc.gridx = 2;
+        gbc.gridwidth = 2;
+        protocolCheckBox = new JCheckBox("Usar TCP");
+        protocolCheckBox.setBackground(backgroundColor);
+        connectionPanel.add(protocolCheckBox, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        gbc.gridwidth = 4;
+        gbc.anchor = GridBagConstraints.CENTER;
         connectButton = new JButton("Conectar");
-        portPanel.add(connectButton);
-        add(portPanel, BorderLayout.NORTH);
+        connectButton.setBackground(accentColor);
+        connectButton.setForeground(Color.BLACK);
+        connectionPanel.add(connectButton, gbc);
+        
+        add(connectionPanel, BorderLayout.NORTH);
 
         messageDisplayArea = new JTextArea();
         messageDisplayArea.setEditable(false);
         messageDisplayArea.setLineWrap(true);
         messageDisplayArea.setWrapStyleWord(true);
+        messageDisplayArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
         JScrollPane scrollPane = new JScrollPane(messageDisplayArea);
-        scrollPane.setBorder(BorderFactory.createTitledBorder("Mensagens"));
+        scrollPane.setBorder(BorderFactory.createTitledBorder(orangeBorder, " Mensagens "));
         add(scrollPane, BorderLayout.CENTER);
 
         JPanel inputPanel = new JPanel(new BorderLayout(5, 5));
-        inputPanel.setBorder(BorderFactory.createTitledBorder("Escreva sua mensagem"));
+        inputPanel.setBackground(backgroundColor);
+        inputPanel.setBorder(BorderFactory.createTitledBorder(orangeBorder, " Escreva sua mensagem "));
 
         messageInputField = new JTextField();
         messageInputField.setEnabled(false);
@@ -65,6 +108,8 @@ public class ChatGUI extends JFrame implements MessageContainer {
 
         sendButton = new JButton("Enviar");
         sendButton.setEnabled(false);
+        sendButton.setBackground(accentColor);
+        sendButton.setForeground(Color.BLACK);
         inputPanel.add(sendButton, BorderLayout.EAST);
         add(inputPanel, BorderLayout.SOUTH);
 
@@ -78,18 +123,30 @@ public class ChatGUI extends JFrame implements MessageContainer {
                 try {
                     localPort = Integer.parseInt(localPortField.getText());
                     remotePort = Integer.parseInt(remotePortField.getText());
+                    String remoteIp = remoteIpField.getText();
+                    boolean useTcp = protocolCheckBox.isSelected();
 
-                    sender = ChatFactory.build(false, "localhost", remotePort, localPort, ChatGUI.this);
-                    
+                    if (remoteIp.trim().isEmpty()) {
+                        JOptionPane.showMessageDialog(ChatGUI.this,
+                                "O campo 'IP Remoto' não pode estar vazio.",
+                                "Erro de Entrada", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+
+                    sender = ChatFactory.build(useTcp, remoteIp, remotePort, localPort, ChatGUI.this);
+
                     localPortField.setEditable(false);
+                    remoteIpField.setEditable(false);
                     remotePortField.setEditable(false);
+                    protocolCheckBox.setEnabled(false);
                     connectButton.setEnabled(false);
 
                     messageInputField.setEnabled(true);
                     sendButton.setEnabled(true);
                     messageInputField.requestFocusInWindow();
-                    
-                    newMessage("Conectado com sucesso! Você pode começar a enviar mensagens.");
+
+                    String protocol = useTcp ? "TCP" : "UDP";
+                    newMessage(String.format("Conectado com sucesso via %s! Você pode começar a enviar mensagens.", protocol));
 
                 } catch (NumberFormatException ex) {
                     JOptionPane.showMessageDialog(ChatGUI.this,
